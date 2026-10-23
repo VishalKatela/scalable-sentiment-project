@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel Verdict — Scalable Movie Review Sentiment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --curtain: #1a0e22;
+    --curtain-raised: #2a1636;
+    --card: #33183f;
+    --border: #5a2a63;
+    --cream: #fdf6ec;
+    --ink-dim: #c9a8d6;
+    --ink-faint: #9a76a8;
+    --gold: #ffc531;
+    --gold-dim: #d99a1a;
+    --emerald: #17e0a0;
+    --emerald-soft: rgba(23, 224, 160, 0.16);
+    --panned: #ff4d6a;
+    --panned-soft: rgba(255, 77, 106, 0.16);
+    --hotpink: #ff3fa4;
+    --teal: #2ee6d6;
+  }
+
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    top: 0; bottom: 0;
+    width: 26px;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(255, 197, 49, 0.35) 0, rgba(255, 197, 49, 0.35) 14px,
+      transparent 14px, transparent 34px
+    );
+    background-size: 6px 34px;
+    background-position: center;
+    background-repeat: repeat-y;
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  body::before { left: 18px; }
+  body::after { right: 18px; }
+
+  @media (max-width: 900px) {
+    body::before, body::after { display: none; }
+  }
+
+  body {
+    margin: 0;
+    background: var(--curtain);
+    background-image:
+      radial-gradient(circle at 50% -12%, rgba(255, 197, 49, 0.22), transparent 45%),
+      radial-gradient(circle at 100% 110%, rgba(23, 224, 160, 0.12), transparent 50%),
+      radial-gradient(circle at -10% 60%, rgba(255, 63, 164, 0.10), transparent 45%);
+    color: var(--cream);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  main { max-width: 900px; margin: 0 auto; padding: 0 40px 100px; }
+
+  @media (min-width: 1100px) {
+    main { max-width: 980px; padding: 0 48px 120px; }
+  }
+
+  /* ---------- Marquee hero ---------- */
+
+  .marquee {
+    padding: 56px 0 40px;
+    text-align: center;
+  }
+
+  .bulbs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+
+  .bulbs span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--gold);
+    box-shadow: 0 0 8px 2px rgba(255, 197, 49, 0.8);
+    animation: twinkle 2.6s ease-in-out infinite;
+  }
+
+  .bulbs span:nth-child(2) { background: var(--hotpink); box-shadow: 0 0 8px 2px rgba(255, 63, 164, 0.8); }
+  .bulbs span:nth-child(4) { background: var(--teal); box-shadow: 0 0 8px 2px rgba(46, 230, 214, 0.8); }
+  .bulbs span:nth-child(6) { background: var(--emerald); box-shadow: 0 0 8px 2px rgba(23, 224, 160, 0.8); }
+
+  .bulbs span:nth-child(odd) { animation-delay: 0.4s; }
+  .bulbs span:nth-child(3n) { animation-delay: 0.9s; }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+
+  .marquee .kicker {
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin: 0 0 14px;
+  }
+
+  .marquee h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 800;
+    font-size: clamp(2.4rem, 7vw, 3.6rem);
+    line-height: 1.08;
+    margin: 0 0 18px;
+    color: var(--cream);
+    text-shadow: 0 0 30px rgba(255, 197, 49, 0.28);
+  }
+
+  .marquee h1 em {
+    font-style: italic;
+    color: var(--hotpink);
+    text-shadow: 0 0 28px rgba(255, 63, 164, 0.4);
+  }
+
+  .marquee p {
+    color: var(--ink-dim);
+    font-size: 1.02rem;
+    line-height: 1.65;
+    max-width: 44ch;
+    margin: 0 auto;
+  }
+
+  /* ---------- Film strip divider ---------- */
+
+  .filmstrip {
+    height: 22px;
+    margin: 12px 0 44px;
+    background-image: repeating-linear-gradient(
+      to right,
+      var(--border) 0, var(--border) 10px,
+      transparent 10px, transparent 24px
+    );
+    background-size: 24px 4px;
+    background-repeat: repeat-x;
+    background-position: left top, left bottom;
+    position: relative;
+    opacity: 0.8;
+  }
+
+  .filmstrip::before, .filmstrip::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    height: 4px;
+    background-image: repeating-linear-gradient(to right, var(--border) 0, var(--border) 10px, transparent 10px, transparent 24px);
+  }
+  .filmstrip::before { top: 0; }
+  .filmstrip::after { bottom: 0; }
+
+  .section-heading {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .section-sub {
+    color: var(--ink-faint);
+    font-size: 0.88rem;
+    margin: 0 0 22px;
+  }
+
+  /* ---------- Screening room / analyzer ---------- */
+
+  .analyzer { margin-top: 56px; }
+
+  textarea {
+    width: 100%;
+    min-height: 200px;
+    resize: vertical;
+    background: var(--curtain-raised);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--cream);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 1.06rem;
+    padding: 22px;
+    line-height: 1.7;
+    box-sizing: border-box;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 4px rgba(255, 197, 49, 0.12), 0 0 24px rgba(255, 197, 49, 0.10);
+    animation: glowPulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(255, 197, 49, 0.10), 0 0 18px rgba(255, 197, 49, 0.08); }
+    50% { box-shadow: 0 0 0 4px rgba(255, 197, 49, 0.18), 0 0 30px rgba(255, 197, 49, 0.16); }
+  }
+  textarea::placeholder { color: var(--ink-faint); }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 18px;
+  }
+
+  button {
+    background: var(--gold);
+    color: #241a0c;
+    border: none;
+    border-radius: 4px;
+    padding: 12px 24px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+
+  button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  button:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+  .status { font-size: 0.85rem; color: var(--ink-faint); }
+  .status.error { color: var(--panned); }
+
+  section.result { margin-top: 44px; display: none; }
+  section.result.visible { display: block; animation: fadeUp 0.4s ease; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Verdict card */
+
+  .verdict-card {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 28px 26px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--curtain-raised);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .verdict-card.positive {
+    border-color: rgba(23, 224, 160, 0.4);
+    background: linear-gradient(135deg, rgba(23, 224, 160, 0.10), var(--curtain-raised) 60%);
+  }
+
+  .verdict-card.negative {
+    border-color: rgba(255, 77, 106, 0.4);
+    background: linear-gradient(135deg, rgba(255, 77, 106, 0.10), var(--curtain-raised) 60%);
+  }
+
+  .stamp {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 12px 20px;
+    border: 3px double currentColor;
+    border-radius: 8px;
+    transform: rotate(-6deg);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .stamp.positive { color: var(--emerald); background: var(--emerald-soft); }
+  .stamp.negative { color: var(--panned); background: var(--panned-soft); }
+
+  .verdict-detail { flex: 1; min-width: 0; }
+
+  .verdict-message {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0 0 10px;
+    line-height: 1.3;
+  }
+
+  .verdict-message.positive { color: var(--emerald); }
+  .verdict-message.negative { color: var(--panned); }
+
+  .stars {
+    font-size: 1.15rem;
+    letter-spacing: 3px;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+
+  .stars .dim { color: var(--border); }
+
+  /* Confidence — made prominent */
+  .confidence-badge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    padding: 6px 16px;
+  }
+
+  .confidence-badge .label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+
+  .confidence-badge .value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+  }
+
+  .confidence-badge.positive .value { color: var(--emerald); }
+  .confidence-badge.negative .value { color: var(--panned); }
+
+  .explain-heading {
+    margin: 34px 0 4px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.15rem;
+    color: var(--cream);
+  }
+
+  .explain-sub {
+    color: var(--ink-faint);
+    font-size: 0.86rem;
+    margin: 0 0 22px;
+    line-height: 1.6;
+  }
+
+  .weights-panel {
+    background: var(--curtain-raised);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 26px 26px 18px;
+  }
+
+  .legend { display: flex; gap: 22px; margin: 0 0 22px; font-size: 0.82rem; color: var(--ink-faint); }
+  .legend .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 7px; vertical-align: middle; }
+
+  .weights { display: flex; flex-direction: column; gap: 14px; }
+
+  .weight-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 64px;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.95rem;
+    opacity: 0;
+    animation: rowIn 0.5s ease forwards;
+  }
+
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .weight-row .word {
+    color: var(--cream);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .weight-row .track { height: 12px; background: rgba(255,255,255,0.06); border-radius: 6px; position: relative; overflow: hidden; }
+  .weight-row .fill {
+    position: absolute;
+    top: 0; bottom: 0;
+    border-radius: 6px;
+    transform: scaleX(0);
+    animation: growBar 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .weight-row .fill.positive { background: linear-gradient(90deg, rgba(23,224,160,0.5), var(--emerald)); left: 50%; transform-origin: left center; box-shadow: 0 0 10px rgba(23, 224, 160, 0.35); }
+  .weight-row .fill.negative { background: linear-gradient(90deg, var(--panned), rgba(255,77,106,0.5)); right: 50%; transform-origin: right center; box-shadow: 0 0 10px rgba(255, 77, 106, 0.35); }
+
+  @keyframes growBar {
+    from { transform: scaleX(0); opacity: 0.3; }
+    to { transform: scaleX(1); opacity: 1; }
+  }
+  .weight-row .value { text-align: right; color: var(--ink-faint); font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+
+  /* ---------- Language / model badge ---------- */
+  .meta-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .meta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.76rem;
+    letter-spacing: 0.04em;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    color: var(--ink-dim);
+  }
+  .meta-badge .flag { font-size: 1rem; }
+
+  /* ---------- LLM critic panel ---------- */
+  .llm-section { margin-top: 34px; display: none; }
+  .llm-section.visible { display: block; animation: fadeUp 0.4s ease; }
+
+  .llm-btn {
+    background: transparent;
+    color: var(--teal);
+    border: 1px solid var(--teal);
+    border-radius: 4px;
+    padding: 10px 22px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: background 0.18s ease, transform 0.12s ease;
+  }
+  .llm-btn:hover { background: rgba(46,230,214,0.10); transform: translateY(-1px); }
+  .llm-btn:disabled { opacity: 0.35; cursor: default; transform: none; }
+
+  .llm-panel {
+    margin-top: 18px;
+    background: var(--curtain-raised);
+    border: 1px solid rgba(46,230,214,0.25);
+    border-radius: 10px;
+    padding: 22px 26px;
+    display: none;
+  }
+  .llm-panel.visible { display: block; animation: fadeUp 0.35s ease; }
+
+  .llm-panel .llm-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--teal);
+    margin: 0 0 10px;
+  }
+  .llm-panel .llm-narrative {
+    color: var(--cream);
+    font-size: 1rem;
+    line-height: 1.72;
+    margin: 0;
+    white-space: pre-wrap;
+  }
+  .llm-panel .llm-note {
+    color: var(--ink-faint);
+    font-size: 0.82rem;
+    margin: 10px 0 0;
+    font-style: italic;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 64px;
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <div class="marquee">
+    <div class="bulbs">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <h1>Do the algorithms<br>agree with the <em>critics?</em></h1>
+    <p>Three models learned to judge 50,000 movie reviews — two trained across a distributed Spark cluster, two pretrained transformers (RoBERTa &amp; mBERT). Hand any review — in any language — to the house critic and watch which words swayed the verdict.</p>
+  </div>
+
+  <div class="filmstrip"></div>
+
+  <div class="analyzer">
+    <p class="section-heading">Bring your own review</p>
+    <p class="section-sub">RoBERTa (English) or mBERT (multilingual) scores the review — LIME explains it word by word. Try any language!</p>
+
+    <textarea id="review" placeholder="e.g. The battery life is disappointing but the screen is gorgeous..."></textarea>
+    <div class="actions">
+      <button id="analyzeBtn">Screen this review</button>
+      <span class="status" id="status"></span>
+    </div>
+
+    <section class="result" id="result">
+      <div class="verdict-card" id="verdictCard">
+        <span class="stamp" id="stamp"></span>
+        <div class="verdict-detail">
+          <p class="verdict-message" id="verdictMessage"></p>
+          <div class="stars" id="stars"></div>
+          <div class="confidence-badge" id="confidenceBadge">
+            <span class="label">Model confidence</span>
+            <span class="value" id="confidencePct"></span>
+          </div>
+          <div class="meta-row" id="metaRow"></div>
+        </div>
+      </div>
+
+      <div class="explain-heading">Why the critic made this call</div>
+      <p class="explain-sub">The words below moved the transformer's decision the most — the longer the bar, the bigger the pull toward that verdict.</p>
+
+      <div class="weights-panel">
+        <div class="legend">
+          <span><span class="swatch" style="background: var(--emerald)"></span>pushed toward positive</span>
+          <span><span class="swatch" style="background: var(--panned)"></span>pushed toward negative</span>
+        </div>
+        <div class="weights" id="weights"></div>
+      </div>
+
+      <!-- LLM section -->
+      <div class="llm-section" id="llmSection">
+        <div class="explain-heading">Ask the critic</div>
+        <p class="explain-sub">Let an LLM read the model verdict and write a 2–3 sentence review in plain English. Works instantly — no API key required.</p>
+        <button class="llm-btn" id="llmBtn">✦ Ask the critic (LLM)</button>
+        <div class="llm-panel" id="llmPanel">
+          <p class="llm-label">LLM Critic's Commentary</p>
+          <p class="llm-narrative" id="llmNarrative"></p>
+          <p class="llm-note" id="llmNote"></p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>Movie Review Sentiment Analysis — Spark MLlib · RoBERTa · mBERT · LIME · LLaMA via Groq</footer>
+
+</main>
+
+<script>
+  const API_BASE = "http://localhost:8000";
+
+  const textarea        = document.getElementById("review");
+  const analyzeBtn      = document.getElementById("analyzeBtn");
+  const statusEl        = document.getElementById("status");
+  const resultSection   = document.getElementById("result");
+  const verdictCard     = document.getElementById("verdictCard");
+  const stampEl         = document.getElementById("stamp");
+  const verdictMessageEl= document.getElementById("verdictMessage");
+  const starsEl         = document.getElementById("stars");
+  const confidenceBadgeEl = document.getElementById("confidenceBadge");
+  const confidencePctEl = document.getElementById("confidencePct");
+  const metaRowEl       = document.getElementById("metaRow");
+  const weightsEl       = document.getElementById("weights");
+  const llmSection      = document.getElementById("llmSection");
+  const llmBtn          = document.getElementById("llmBtn");
+  const llmPanel        = document.getElementById("llmPanel");
+  const llmNarrative    = document.getElementById("llmNarrative");
+  const llmNote         = document.getElementById("llmNote");
+
+  // Language code → flag emoji lookup
+  const LANG_FLAGS = {
+    en: "🇺🇸", fr: "🇫🇷", de: "🇩🇪", es: "🇪🇸", it: "🇮🇹",
+    nl: "🇳🇱", pt: "🇵🇹", ja: "🇯🇵", ko: "🇰🇷", zh: "🇨🇳",
+    ar: "🇸🇦", hi: "🇮🇳", ru: "🇷🇺", tr: "🇹🇷", pl: "🇵🇱",
+    bn: "🇧🇩", ur: "🇵🇰", ta: "🇮🇳", te: "🇮🇳", mr: "🇮🇳",
+    fa: "🇮🇷", he: "🇮🇱", sv: "🇸🇪", da: "🇩🇰", fi: "🇫🇮",
+    no: "🇳🇴", cs: "🇨🇿", ro: "🇷🇴", hu: "🇭🇺", uk: "🇺🇦",
+    id: "🇮🇩", ms: "🇲🇾", th: "🇹🇭", vi: "🇻🇳",
+  };
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  const POSITIVE_MESSAGES = [
+    "The critic thinks this movie is good — a solid recommendation.",
+    "Strong praise here — the critic is calling this one a keeper.",
+    "This review reads like a thumbs up. Worth the watch.",
+  ];
+  const NEGATIVE_MESSAGES = [
+    "The critic isn't convinced — this reads as a negative review.",
+    "This one didn't land well. The critic is calling it a pass.",
+    "Mostly discouraging signs here — not a recommended watch.",
+  ];
+
+  function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
+
+  function setStatus(text, isError) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle("error", !!isError);
+  }
+
+  function renderStars(confidence) {
+    const filled = Math.max(1, Math.min(5, Math.round(confidence * 5)));
+    let html = "";
+    for (let i = 0; i < 5; i++) html += i < filled ? "★" : "<span class='dim'>★</span>";
+    starsEl.innerHTML = html;
+  }
+
+  function renderMeta(lang, modelName) {
+    const flag = LANG_FLAGS[lang] || "🌐";
+    const langName = lang ? lang.toUpperCase() : "?";
+    metaRowEl.innerHTML = `
+      <span class="meta-badge"><span class="flag">${flag}</span> ${langName}</span>
+      <span class="meta-badge">🤖 ${escapeHtml(modelName)}</span>
+    `;
+  }
+
+  function renderWeights(wordWeights) {
+    const sorted = [...wordWeights].sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
+    const maxAbs = Math.max(...sorted.map((w) => Math.abs(w.weight)), 0.0001);
+    weightsEl.innerHTML = sorted.map(({ word, weight }, i) => {
+      const pct = Math.min(100, (Math.abs(weight) / maxAbs) * 50);
+      const cls = weight >= 0 ? "positive" : "negative";
+      const delay = (i * 0.07).toFixed(2);
+      return `
+        <div class="weight-row" style="animation-delay:${delay}s">
+          <span class="word">${escapeHtml(word)}</span>
+          <span class="track"><span class="fill ${cls}" style="width:${pct}%; animation-delay:${delay}s"></span></span>
+          <span class="value">${weight.toFixed(3)}</span>
+        </div>`;
+    }).join("");
+  }
+
+  // Store the last review text so the LLM button can reuse it
+  let lastReview = "";
+
+  async function analyze() {
+    const review = textarea.value.trim();
+    if (!review) { setStatus("Write a review first.", true); return; }
+
+    lastReview = review;
+    analyzeBtn.disabled = true;
+    setStatus("The critic is screening it...");
+    resultSection.classList.remove("visible");
+    llmSection.classList.remove("visible");
+    llmPanel.classList.remove("visible");
+
+    try {
+      // --- /predict ---
+      const predictRes = await fetch(`${API_BASE}/predict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ review }),
+      });
+      if (!predictRes.ok) throw new Error(`Predict failed (${predictRes.status})`);
+      const pd = await predictRes.json();
+
+      const isPositive = pd.sentiment === "positive";
+      const tone = isPositive ? "positive" : "negative";
+
+      stampEl.textContent = isPositive ? "Approved" : "Negative Review";
+      stampEl.className = "stamp " + tone;
+      verdictCard.className = "verdict-card " + tone;
+      verdictMessageEl.textContent = pick(isPositive ? POSITIVE_MESSAGES : NEGATIVE_MESSAGES);
+      verdictMessageEl.className = "verdict-message " + tone;
+      confidenceBadgeEl.className = "confidence-badge " + tone;
+      renderStars(pd.confidence);
+      confidencePctEl.textContent = `${(pd.confidence * 100).toFixed(1)}%`;
+      renderMeta(pd.language, pd.model || "Transformer");
+
+      // --- /explain ---
+      setStatus("Working out which words mattered (this can take a few seconds)...");
+      const explainRes = await fetch(`${API_BASE}/explain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ review }),
+      });
+      if (!explainRes.ok) throw new Error(`Explain failed (${explainRes.status})`);
+      const explainData = await explainRes.json();
+      renderWeights(explainData.word_weights);
+
+      resultSection.classList.add("visible");
+      llmSection.classList.add("visible");
+      setStatus("Done.");
+    } catch (err) {
+      console.error(err);
+      setStatus(`Couldn't reach the API: ${err.message}. Is uvicorn running on :8000?`, true);
+    } finally {
+      analyzeBtn.disabled = false;
+    }
+  }
+
+  async function askLlm() {
+    if (!lastReview) return;
+    llmBtn.disabled = true;
+    llmBtn.textContent = "✦ Asking the critic...";
+    llmPanel.classList.remove("visible");
+
+    try {
+      const res = await fetch(`${API_BASE}/llm-explain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ review: lastReview }),
+      });
+      const data = await res.json();
+
+      llmNarrative.textContent = data.available ? data.narrative : "";
+      llmNote.textContent = data.available
+        ? `Generated by ${data.source || "built-in critic"}.`
+        : `⚠ ${data.message}`;
+      llmPanel.classList.add("visible");
+    } catch (err) {
+      llmNarrative.textContent = "";
+      llmNote.textContent = `Error: ${err.message}`;
+      llmPanel.classList.add("visible");
+    } finally {
+      llmBtn.disabled = false;
+      llmBtn.textContent = "✦ Ask the critic (LLM)";
+    }
+  }
+
+  analyzeBtn.addEventListener("click", analyze);
+  llmBtn.addEventListener("click", askLlm);
+  textarea.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) analyze();
+  });
+</script>
+</body>
+</html>

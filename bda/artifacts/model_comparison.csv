@@ -1,0 +1,4 @@
+Model,Accuracy,Training Time (s),Framework,Explainability
+Spark Logistic Regression (TF-IDF),0.8181351933531644,15.88,Spark MLlib (distributed),Coefficients (linear)
+Spark Naive Bayes (TF-IDF),0.8232639245050775,8.78,Spark MLlib (distributed),Feature log-probs
+Keras LSTM (Embeddings),0.87,not measured,TensorFlow/Keras (single-node),"LIME (post-hoc, model-agnostic)"

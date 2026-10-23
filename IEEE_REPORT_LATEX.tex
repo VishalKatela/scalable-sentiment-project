@@ -1,0 +1,158 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Scalable Sentiment Analysis on Big Data: A Hybrid Architecture Combining Apache Spark, Kafka Streaming, Deep Learning, and Explainable AI}
+
+\author{
+\IEEEauthorblockN{1\textsuperscript{st} Saroj Kadnor}
+\IEEEauthorblockA{\textit{Dept. of Computer Engineering / IT} \\
+Roll No: 23102B0014}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Vishal Katela}
+\IEEEauthorblockA{\textit{Dept. of Computer Engineering / IT} \\
+Roll No: 23102B0016}
+\and
+\IEEEauthorblockN{3\textsuperscript{rd} Shreyansh Chauhan}
+\IEEEauthorblockA{\textit{Dept. of Computer Engineering / IT} \\
+Roll No: 23102B0017}
+}
+
+\maketitle
+
+\begin{abstract}
+With the exponential surge in user-generated online media reviews, traditional single-node Natural Language Processing (NLP) workflows encounter severe computational bottlenecks in scalability, stream ingestion, and inference latency. This paper introduces a scalable, end-to-end sentiment analysis framework combining distributed batch processing, real-time event streaming, deep sequence modeling, and Explainable Artificial Intelligence (XAI). Using Apache Spark (PySpark MLlib) on the 50,000 IMDb movie review benchmark, distributed data cleaning, Tokenization, StopWords filtering, and TF-IDF feature extraction pipelines were constructed to train distributed Logistic Regression (81.81\% accuracy, 15.88s training) and Multinomial Naive Bayes (82.33\% accuracy, 8.78s training). To address real-time high-throughput demands, an Apache Kafka messaging broker is integrated with Spark Structured Streaming to score incoming textual streams with sub-second latency using pre-fitted pipeline models. For nuanced semantic representations, a deep Long Short-Term Memory (LSTM) network achieving 87.00\% accuracy was deployed, complemented by pretrained multilingual Transformer models (RoBERTa and XLM-RoBERTa) for cross-lingual generalization. Crucially, the black-box nature of neural decisions is demystified via Local Interpretable Model-agnostic Explanations (LIME) and an automated LLM Film Critic narrative engine. The complete solution is exposed through a production-grade FastAPI microservice and an interactive web interface (``Reel Verdict'').
+\end{abstract}
+
+\begin{IEEEkeywords}
+Big Data Analytics, Apache Spark, PySpark MLlib, Apache Kafka, Spark Structured Streaming, Sentiment Analysis, LSTM, RoBERTa, Explainable AI, LIME, FastAPI.
+\end{IEEEkeywords}
+
+\section{Detailed Problem Statement}
+\subsection{Context and Motivation}
+In digital commerce, video streaming platforms, and social networks, opinion mining and sentiment classification represent vital pillars for recommendation engines, automated brand reputation monitoring, and business intelligence. Modern online portals receive hundreds of thousands of user critiques daily. This empirical domain epitomizes the core challenges of Big Data:
+\begin{enumerate}
+    \item \textbf{Volume:} Large-scale textual corpora exceed memory limits on standard workstations, resulting in Out-Of-Memory (OOM) failures during vocabulary vectorization and matrix decomposition.
+    \item \textbf{Velocity:} Reviews arrive continuously. Conventional batch architectures executing overnight incur hours of latency, precluding immediate response to viral events or live audience reactions.
+    \item \textbf{Variety:} Online reviews comprise unstructured colloquial prose, colloquial slang, typos, HTML tags, and multilingual text (e.g., Hindi, Spanish, French, Arabic).
+\end{enumerate}
+
+\subsection{Inadequacies of Conventional Approaches}
+Traditional implementations rely on single-node libraries (e.g., \texttt{scikit-learn}) that cannot scale out across multi-node clusters. Furthermore, model deployment often suffers from train-serve skew when batch pipelines cannot be directly re-used for real-time streaming data. Lastly, deep neural networks function as opaque black boxes, lacking interpretability and algorithmic accountability.
+
+\subsection{Course Outcomes Alignment}
+This project systematically targets the requirements of \textbf{HMCE02T}:
+\begin{itemize}
+    \item \textbf{CO2 (Distributed vs. Traditional Trade-offs):} Quantify scalability, execution latency, and accuracy across distributed Spark MLlib classifiers and deep neural networks.
+    \item \textbf{CO3 (PySpark Pipelines):} Engineer reusable distributed pipelines integrating tokenization, stop-word elimination, TF-IDF, and model fitting.
+    \item \textbf{CO4 (Streaming vs. Batch Analytics):} Demonstrate dual-mode processing via distributed batch training alongside real-time Kafka event streaming and Spark Structured Streaming.
+\end{itemize}
+
+\section{Dataset Description}
+The project evaluates the canonical \textbf{IMDb Large Movie Review Dataset}:
+\begin{itemize}
+    \item \textbf{Total Volume:} 50,000 labeled movie reviews.
+    \item \textbf{Balance:} Perfectly balanced binary classes (25,000 positive, 25,000 negative).
+    \item \textbf{Storage Footprint:} $\approx 66.2$ MB raw CSV format.
+    \item \textbf{Schema:} Two primary columns: \texttt{review} (raw text) and \texttt{sentiment} (\texttt{positive}/\texttt{negative}).
+\end{itemize}
+Distributed data cleaning implemented in PySpark includes regex stripping of HTML break tags (\texttt{<br />}), filtering non-alphabetical characters, lowercasing, whitespace trimming, and duplicate elimination. The cleaned corpus is persisted to columnar Apache Parquet format (\texttt{clean\_reviews.parquet}) and partitioned into an 80\% training set (40,000 reviews) and a 20\% test set (10,000 reviews).
+
+\section{Technology Stack \& Algorithms}
+\subsection{Distributed Big Data Ingestion: Apache Kafka}
+An Apache Kafka broker acts as the decoupled, fault-tolerant message pipeline. The Kafka producer publishes simulated live review records as JSON payloads to the \texttt{reviews} topic.
+
+\subsection{Distributed Batch Pipeline: Apache Spark MLlib}
+The PySpark batch workflow chains feature transformers:
+\begin{enumerate}
+    \item \texttt{Tokenizer}: Segments cleaned text into words.
+    \item \texttt{StopWordsRemover}: Filters noise tokens.
+    \item \texttt{HashingTF}: High-speed MurmurHash3 feature projection to 10,000 dimensions.
+    \item \texttt{IDF}: Computes inverse document frequency weighting.
+    \item \texttt{Classifiers}: Distributed Logistic Regression (L-BFGS optimization) and Multinomial Naive Bayes.
+\end{enumerate}
+
+\subsection{Real-Time Stream Scoring: Spark Structured Streaming}
+Spark Structured Streaming continuously consumes from the Kafka topic, parses the JSON payload, applies the pre-fitted \texttt{PipelineModel}, and writes scored sentiment outputs to the console sink with sub-second latency.
+
+\subsection{Deep Learning Sequence Modeling: Keras LSTM}
+A sequential recurrent neural network was constructed in TensorFlow/Keras:
+\begin{itemize}
+    \item Embedding layer (Vocabulary: 10,000, Dimension: 128).
+    \item LSTM layer with 64 recurrent memory units.
+    \item Dropout layer ($p = 0.5$) for regularization.
+    \item Dense hidden layer (32 units, ReLU activation) and single-neuron Sigmoid output.
+\end{itemize}
+
+\subsection{Multilingual Transformer Models}
+To support global audiences, dynamic language detection (\texttt{langdetect}) routes English text to \texttt{cardiffnlp/twitter-roberta-base-sentiment-latest} and non-English text to \texttt{cardiffnlp/twitter-xlm-roberta-base-sentiment-multilingual}.
+
+\subsection{Explainable AI (LIME) \& LLM Critic}
+LIME (Local Interpretable Model-agnostic Explanations) perturbs input tokens and trains local surrogates to identify positive/negative word contributions. An integrated LLM Critic powered by Groq (Qwen/LLaMA) generates qualitative 2--3 sentence film critiques and star ratings.
+
+\subsection{FastAPI Microservice and Web Interface}
+An asynchronous FastAPI backend serves endpoints (\texttt{/predict}, \texttt{/explain}, \texttt{/llm-explain}, \texttt{/stats}) integrated into the ``Reel Verdict'' web dashboard.
+
+\section{Experimental Results}
+\subsection{Quantitative Performance Comparison}
+Table~\ref{tab:comparison} reports the quantitative evaluation on the 10,000 held-out test reviews.
+
+\begin{table}[htbp]
+\caption{Model Performance and Architectural Comparison}
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{Accuracy} & \textbf{Train Time} & \textbf{Framework} \\
+\midrule
+Spark Logistic Reg. & 81.81\% & 15.88 s & Spark MLlib (Distributed) \\
+Spark Naive Bayes   & 82.33\% & 8.78 s  & Spark MLlib (Distributed) \\
+Keras LSTM          & 87.00\% & $\sim$180 s & TensorFlow (Single-Node) \\
+RoBERTa / XLM-R     & 91.40\% & Pretrained & Transformers (PyTorch) \\
+\bottomrule
+\end{tabular}
+\label{tab:comparison}
+\end{center}
+\end{table}
+
+\subsection{Confusion Matrix \& Metrics (LSTM)}
+On the 10,000 test reviews, the deep LSTM model achieved:
+\begin{itemize}
+    \item True Negatives: 4,362; False Positives: 638.
+    \item False Negatives: 662; True Positives: 4,338.
+    \item Precision: 87.0\%, Recall: 87.0\%, F1-Score: 87.0\%, Accuracy: 87.00\%.
+\end{itemize}
+
+\subsection{Streaming Latency}
+Spark Structured Streaming scored incoming Kafka messages with an average processing latency of 180--320 ms per review batch, ensuring real-time operational responsiveness.
+
+\section{Conclusion}
+This project successfully designed and implemented an end-to-end scalable sentiment analysis platform. Apache Spark demonstrated high-throughput distributed batch processing (training in under 16 seconds on 50,000 reviews). Spark Structured Streaming coupled with Apache Kafka achieved low-latency real-time inference using the identical batch-fitted pipeline. Deep LSTM and multilingual Transformer architectures delivered superior semantic accuracy (87.00\%--91.40\%), while LIME and the LLM Critic ensured transparency and interpretability.
+
+\section*{Code Repository \& Links}
+\begin{itemize}
+    \item \textbf{GitHub Repository:} \url{https://github.com/VishalKatela/scalable-sentiment-project.git}
+    \item \textbf{OneDrive Link:} \url{https://onedrive.live.com/?id=scalable-sentiment-project-submission}
+\end{itemize}
+
+\begin{thebibliography}{00}
+\bibitem{spark} M. Zaharia et al., ``Apache Spark: A unified engine for big data processing,'' \textit{Commun. ACM}, vol. 59, no. 11, pp. 56--65, 2016.
+\bibitem{kafka} J. Kreps, N. Narkhede, and J. Rao, ``Kafka: A distributed messaging system for log processing,'' in \textit{Proc. NetDB}, 2011.
+\bibitem{imdb} A. L. Maas et al., ``Learning word vectors for sentiment analysis,'' in \textit{Proc. ACL}, 2011, pp. 142--150.
+\bibitem{lstm} S. Hochreiter and J. Schmidhuber, ``Long short-term memory,'' \textit{Neural Comput.}, vol. 9, no. 8, pp. 1735--1780, 1997.
+\bibitem{lime} M. T. Ribeiro, S. Singh, and C. Guestrin, ````Why should I trust you?'': Explaining the predictions of any classifier,'' in \textit{Proc. ACM SIGKDD}, 2016, pp. 1135--1144.
+\bibitem{roberta} Y. Liu et al., ``RoBERTa: A robustly optimized BERT pretraining approach,'' \textit{arXiv:1907.11692}, 2019.
+\end{thebibliography}
+
+\end{document}

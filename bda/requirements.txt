@@ -1,0 +1,6 @@
+pyspark==3.5.1
+pandas==2.2.2
+scikit-learn==1.5.1
+tensorflow==2.16.1
+pyarrow==17.0.0
+kafka-python==2.0.2
